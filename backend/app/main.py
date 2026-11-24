@@ -33,6 +33,7 @@ class VercelPathMiddleware:
 
     async def __call__(self, scope, receive, send):
         if scope["type"] == "http":
+            path = scope.get("path", "")
             query_string = scope.get("query_string", b"").decode("utf-8")
             if "__path__" in query_string:
                 params = parse_qs(query_string, keep_blank_values=True)
@@ -41,6 +42,9 @@ class VercelPathMiddleware:
                     scope["path"] = f"/api/{path_val.lstrip('/')}"
                     scope["raw_path"] = scope["path"].encode("utf-8")
                     scope["query_string"] = urlencode(params, doseq=True).encode("utf-8")
+            elif not path.startswith("/api") and path not in ("/docs", "/openapi.json", "/redoc"):
+                scope["path"] = f"/api{path}"
+                scope["raw_path"] = scope["path"].encode("utf-8")
         await self.app(scope, receive, send)
 
 app.add_middleware(VercelPathMiddleware)
